@@ -31,20 +31,17 @@ const schema = zod.object({
     altura: zod.number().min(1).max(100).default(1),
     largura: zod.number().min(10).max(100).default(10),
 })
-    .refine(async ({ altura, comprimento, largura, cepOrigem, cepDestino }) => {
-        if (cepOrigem == cepDestino) {
-            return {
-                message: `CEP's cannot be equals`,
-                path: ['cepOrigem', 'cepDestino']
-            }
-        }
-        if (altura + comprimento + largura > 100) {
-            return {
-                message: 'The sum of all dimensions cannot be greater than 100',
-                path: ['altura', 'comprimento', 'largura']
-            }
-        }
-    })
+    .refine(
+        async ({ cepOrigem, cepDestino }) => cepOrigem != cepDestino,
+        {
+            message: `CEP's cannot be equals`,
+            path: ['cepOrigem', 'cepDestino']
+        })
+    .refine(async ({ altura, comprimento, largura }) => altura + comprimento + largura < 100,
+        {
+            message: 'The sum of all dimensions cannot be greater than 100',
+            path: ['altura', 'comprimento', 'largura']
+        })
 
 export async function GET(request: NextRequest) {
     return NextResponse.json({ hello: 'world' })
@@ -53,6 +50,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     const body = await request.json()
     const parse = await schema.safeParseAsync(body)
+    console.log(JSON.stringify({ body, parse }))
     if (!parse.success) {
         return NextResponse.json({ error: parse.error })
     }
